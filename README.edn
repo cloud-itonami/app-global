@@ -1,1 +1,6 @@
-{:schema "etzhayyim.repository/v1" :name "com-etzhayyim-app-global" :kind :app :canonical-metadata :edn}
+{:schema "etzhayyim.repository/v1"
+ :name "app-global"
+ :kind :app
+ :canonical-metadata :edn
+ :boundary {:role :resource-flow-application
+            :public-surface "cloud-itonami/public-global"}}
