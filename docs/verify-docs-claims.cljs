@@ -1,0 +1,163 @@
+#!/usr/bin/env nbb
+;; verify-docs-claims.cljs — README.md が事実として述べていることを検査する
+;;
+;;   nbb docs/verify-docs-claims.cljs
+;;
+;; exit 0 = PASS / 1 = FAIL / 3 = 判定できなかった（0 でも 1 でもない）
+;;
+;; ── なぜこれが要るか ──────────────────────────────────────────────────────
+;;
+;; この repo の README.md は「何が無いか」を大量に述べている —— Go の backend が
+;; 無い、`src/lib/api/mcp.ts` が無い、three/Threlte/d3 を import している行が
+;; 1 本も無い、`@etzhayyim/design-system` が依存に無い。**不在の主張は、実装が
+;; 進んだ瞬間に静かに嘘になる。** MCP_TOOLS.md と PROJECT.jsonld がまさにそう
+;; なった（実装を指す path が抽出前の monorepo path のまま残り、"Done" と書かれた
+;; deploy 先が NXDOMAIN になった）。README.md を同じ道に行かせないための検査。
+;;
+;; したがって **この検査が赤くなるのは、多くの場合バグではなく前進である。**
+;; 赤くなったら実装を戻すのではなく README.md を直す。
+;;
+;; ── 「測れなかった」を「問題なし」と同じ値で返さない ──────────────────────
+;;
+;; 読めなかったファイルを「その文字列は入っていなかった」と数えると、検査は
+;; 静かに緑になる。ここでは読めない対象は必ず exit 3 で終わる。走査した
+;; tracked file が 0 件のときも 3（証拠の床）。SCANNED 行は「飛ばした」と
+;; 「合格した」を出力で区別するために常に印字する。
+
+(require '["node:child_process" :as cp]
+         '["node:fs" :as fs]
+         '[clojure.string :as str])
+
+(defn- die! [code & msg]
+  (binding [*print-fn* *print-err-fn*] (apply println msg))
+  (js/process.exit code))
+
+(defn- git [& args]
+  (try
+    (str/trim (str (cp/execFileSync "git" (clj->js (vec args)) #js {:encoding "utf8"})))
+    (catch :default e
+      (die! 3 "UNDETERMINED: git" (str/join " " args) "が失敗した —"
+            (or (some-> e .-message) "(理由不明)")))))
+
+(defn- read-tracked
+  "tracked なファイルの中身。tracked でない / 実体が無いなら 3 で終わる。
+   `nil` を返して呼び出し側に「無かった＝合格」と読ませない。"
+  [tracked-set p]
+  (when-not (contains? tracked-set p)
+    (die! 3 "UNDETERMINED:" p "が tracked でない。README.md がこのファイルを前提に"
+          "書かれているので、消えたのなら README.md ごと見直すこと"))
+  (when-not (fs/existsSync p)
+    (die! 3 "UNDETERMINED: tracked なのに実体が無い:" p))
+  (try (fs/readFileSync p "utf8")
+       (catch :default e
+         (die! 3 "UNDETERMINED:" p "が読めない —" (or (some-> e .-message) "")))))
+
+(defn- bytes-of [tracked-set p]
+  (when-not (contains? tracked-set p)
+    (die! 3 "UNDETERMINED:" p "が tracked でない（byte 数を検査できない）"))
+  (when-not (fs/existsSync p) (die! 3 "UNDETERMINED: tracked なのに実体が無い:" p))
+  (.-size (fs/statSync p)))
+
+;; ── 走査対象 ──────────────────────────────────────────────────────────────
+
+(when-not (fs/existsSync "README.md")
+  (die! 3 "UNDETERMINED: README.md が無い。この repo のルートで実行すること"))
+
+(def ^:private tracked
+  (vec (remove str/blank? (str/split-lines (git "ls-files")))))
+
+;; 証拠の床。0 件を「違反 0 件 = 合格」にしない。
+(when (zero? (count tracked))
+  (die! 3 "UNDETERMINED: git ls-files が空。commit の無い repo か、"
+        "ルート以外で実行したか"))
+
+(def ^:private tracked-set (set tracked))
+
+(def ^:private app "appview/global-ui-w5n8p3q6/svelte/")
+
+;; ── 主張 ──────────────────────────────────────────────────────────────────
+;;
+;; :want は README.md に書いてある値。ここを書き換えるときは README.md も
+;; 一緒に書き換わっていなければ意味が無い。
+
+(def ^:private src-files
+  [(str app "src/App.svelte") (str app "src/main.ts")
+   (str app "src/svelte.d.ts") (str app "test/global.test.ts")])
+
+(def ^:private pkg-json (read-tracked tracked-set (str app "package.json")))
+
+(def ^:private pkg
+  (try (js->clj (js/JSON.parse pkg-json) :keywordize-keys false)
+       (catch :default e
+         (die! 3 "UNDETERMINED: package.json が JSON として読めない —"
+               (or (some-> e .-message) "")))))
+
+(defn- absent-matching
+  "tracked のうち re に当たるパス。README.md の「無い」を破るものが出れば非空。"
+  [re] (filterv #(re-find re %) tracked))
+
+(def ^:private import-lines
+  (mapcat (fn [p]
+            (->> (str/split-lines (read-tracked tracked-set p))
+                 (filter #(re-find #"(?i)\b(import|require)\b" %))
+                 (map (fn [l] [p (str/trim l)]))))
+          src-files))
+
+(def ^:private forbidden-import
+  #"['\"](three|@threlte/[a-z-]+|d3-[a-z0-9-]+)['\"]")
+
+(def ^:private checks
+  [{:what "Go の source が無い"
+    :got (absent-matching #"(?i)\.go$") :want []}
+   {:what "MCP_TOOLS.md が名指しする src/lib/ が無い"
+    :got (absent-matching (re-pattern (str "^" app "src/lib/"))) :want []}
+   {:what "wasm/ と legacy-runtime/ が無い"
+    :got (absent-matching #"(?i)(^|/)(wasm|legacy-runtime)/") :want []}
+   {:what "three / Threlte / d3 を import している行が無い"
+    :got (mapv (fn [[p l]] (str p ": " l))
+               (filter (fn [[_ l]] (re-find forbidden-import l)) import-lines))
+    :want []}
+   {:what "@etzhayyim/design-system が依存に無い（tailwind.config.js が壊れている理由）"
+    :got (vec (sort (filter #(str/starts-with? % "@etzhayyim/")
+                            (concat (keys (get pkg "dependencies" {}))
+                                    (keys (get pkg "devDependencies" {}))))))
+    :want []}
+   {:what "README.md / operator-quickstart.md が呼ぶ npm script が在る"
+    :got (vec (sort (remove (set (keys (get pkg "scripts" {})))
+                            ["build" "check" "dev" "preview" "test"])))
+    :want []}
+   {:what "App.svelte はまだ scaffold の文言のまま"
+    :got (boolean (str/includes? (read-tracked tracked-set (str app "src/App.svelte"))
+                                 "Vite entry scaffold"))
+    :want true}
+   {:what "test は expect(true).toBe(true) のまま"
+    :got (boolean (str/includes? (read-tracked tracked-set (str app "test/global.test.ts"))
+                                 "expect(true).toBe(true)"))
+    :want true}
+   {:what "手書き source の合計 byte 数（README.md の表）"
+    :got (reduce + 0 (map #(bytes-of tracked-set %) src-files)) :want 849}
+   {:what "pnpm-lock.yaml の byte 数（README.md の表）"
+    :got (bytes-of tracked-set (str app "pnpm-lock.yaml")) :want 64565}
+   ;; ファイルが 1 本増えたら README.md の冒頭と operator-quickstart.md の
+   ;; step 1 が古くなる。数が動いたら両方を見直させるための主張。
+   {:what "tracked file の総数（README.md 冒頭 / quickstart step 1）"
+    :got (count tracked) :want 32}])
+
+;; ── 出力 ──────────────────────────────────────────────────────────────────
+
+(println (str "SCANNED\t" (count tracked) " tracked file / "
+              (count src-files) " source file / " (count import-lines) " import 行 / "
+              (count checks) " 主張"))
+
+(doseq [{:keys [what got want]} checks]
+  (let [ok (= got want)]
+    (println (str (if ok "  ok   " "  FAIL ") what))
+    (println (str "         got  " (pr-str got)))
+    (when-not ok (println (str "         want " (pr-str want))))))
+
+(if (every? (fn [{:keys [got want]}] (= got want)) checks)
+  (do (println (str "PASS — README.md の " (count checks) " 個の主張は今日も成り立つ"))
+      (js/process.exit 0))
+  (do (println "FAIL — README.md が事実と食い違っている。"
+                "実装が進んだのなら README.md を直すこと（検査を緩めるのではなく）")
+      (js/process.exit 1)))

@@ -1,0 +1,5 @@
+# The repository shipped without a .gitignore. Following the documented
+# `pnpm install` + `pnpm build` therefore left ~3,000 untracked files in
+# `git status`, and a plain `git add -A` would have committed all of them.
+appview/global-ui-w5n8p3q6/svelte/node_modules/
+appview/global-ui-w5n8p3q6/svelte/dist/
