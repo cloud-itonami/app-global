@@ -1,8 +1,9 @@
 # app-global
 
 **A Vite + Svelte 5 single-page scaffold, plus the declaration files describing the
-application it is meant to become.** 26 tracked files, 87,807 bytes. There is no
-backend in this repository, and nothing is deployed.
+application it is meant to become.** 32 tracked files, of which 24 (87,245 bytes) are
+the extraction itself and the rest is this documentation. There is no backend in this
+repository, and nothing is deployed.
 
 Read this file before `CLAUDE.md`, `MCP_TOOLS.md` or `PROJECT.jsonld`. Those three
 were written inside the `etzhayyim/root` monorepo, before this directory was

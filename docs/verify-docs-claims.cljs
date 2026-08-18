@@ -137,7 +137,11 @@
    {:what "手書き source の合計 byte 数（README.md の表）"
     :got (reduce + 0 (map #(bytes-of tracked-set %) src-files)) :want 849}
    {:what "pnpm-lock.yaml の byte 数（README.md の表）"
-    :got (bytes-of tracked-set (str app "pnpm-lock.yaml")) :want 64565}])
+    :got (bytes-of tracked-set (str app "pnpm-lock.yaml")) :want 64565}
+   ;; ファイルが 1 本増えたら README.md の冒頭と operator-quickstart.md の
+   ;; step 1 が古くなる。数が動いたら両方を見直させるための主張。
+   {:what "tracked file の総数（README.md 冒頭 / quickstart step 1）"
+    :got (count tracked) :want 32}])
 
 ;; ── 出力 ──────────────────────────────────────────────────────────────────
 

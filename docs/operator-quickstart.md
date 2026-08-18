@@ -18,7 +18,7 @@ git clone git@github.com:cloud-itonami/app-global.git
 cd app-global
 ```
 
-The whole repository is 31 tracked files. Only one directory is runnable:
+The whole repository is 32 tracked files. Only one directory is runnable:
 
 ```bash
 cd appview/global-ui-w5n8p3q6/svelte
@@ -105,16 +105,16 @@ nbb docs/verify-custody.cljs
 ```
 
 ```
-SCANNED	31 tracked file / 4 source file / 4 import 行 / 10 主張
-PASS — README.md の 10 個の主張は今日も成り立つ
+SCANNED	32 tracked file / 4 source file / 4 import 行 / 11 主張
+PASS — README.md の 11 個の主張は今日も成り立つ
 
 SCANNED	24 保管ファイル / 8 追加物 / 3 検査
 PASS — 保管対象 24 ファイルは出所と同一
 ```
 
 `verify-docs-claims` pins the factual assertions in `README.md` — that there is no Go
-source, no `src/lib/`, no `three`/`Threlte`/`d3` import, and that the byte counts in
-the README's table are still the byte counts on disk. **It is expected to go red when
+source, no `src/lib/`, no `three`/`Threlte`/`d3` import, and that the file count and
+byte counts in the README's table are still the ones on disk. **It is expected to go red when
 somebody starts implementing.** That is the point: it forces `README.md` to be
 updated in the same change rather than drifting into the state `MCP_TOOLS.md` and
 `PROJECT.jsonld` are already in.
@@ -124,9 +124,11 @@ hash recorded in `migration.edn`. Adding a file means adding it to
 `:identity :allowed-additions`, or custody fails.
 
 Both exit `0` on pass, `1` on fail, and `3` when they could not determine an answer —
-missing input, unreadable input, or not being run from the repository root. `3` is a
-distinct value on purpose, so that "the check did not run" can never be mistaken for
-"the check found nothing".
+missing input, unreadable input, a failing `git`, or not being run from the repository
+root. `3` is a distinct value on purpose, so that "the check did not run" can never be
+mistaken for "the check found nothing". If you have `core.fsmonitor` enabled and its
+daemon is unhealthy, `git ls-files` can fail intermittently and you will get a `3` with
+the git error quoted; re-run before treating it as a finding.
 
 Add `--origin` to `verify-custody` to also compare against the source tree as GitHub
 serves it today (needs an authenticated `gh`).
