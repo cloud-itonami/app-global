@@ -100,8 +100,8 @@ Back at the repository root:
 
 ```bash
 cd ../../..
-nbb docs/verify-docs-claims.cljs
-nbb docs/verify-custody.cljs
+kbb --backend sci docs/verify-docs-claims.cljk
+kbb --backend sci docs/verify-custody.cljk
 ```
 
 ```
