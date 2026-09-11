@@ -114,8 +114,8 @@ page from quietly becoming as wrong as the documents it is warning you about.
 ## Verification
 
 ```bash
-nbb docs/verify-docs-claims.cljs   # the factual claims above still hold
-nbb docs/verify-custody.cljs       # extraction is byte-identical to its source
+kbb --backend sci docs/verify-docs-claims.cljk   # the factual claims above still hold
+kbb --backend sci docs/verify-custody.cljk       # extraction is byte-identical to its source
 ```
 
 Exit `0` = pass, `1` = fail, `3` = could not determine. `3` exists so that "I could
