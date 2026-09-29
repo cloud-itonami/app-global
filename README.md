@@ -5,7 +5,7 @@ application it is meant to become.** 32 tracked files, of which 24 (87,245 bytes
 the extraction itself and the rest is this documentation. There is no backend in this
 repository, and nothing is deployed.
 
-Read this file before `CLAUDE.md`, `MCP_TOOLS.md` or `PROJECT.jsonld`. Those three
+Read this file before `AGENTS.md`, `MCP_TOOLS.md` or `PROJECT.jsonld`. Those three
 were written inside the `etzhayyim/root` monorepo, before this directory was
 extracted, and they describe a system larger than what was extracted. This file
 says which parts of them you can act on today.
@@ -21,7 +21,7 @@ says which parts of them you can act on today.
 
 ```
 appview/global-ui-w5n8p3q6/svelte/     the only runnable thing in the repo
-CLAUDE.md MCP_TOOLS.md PROJECT.jsonld  descriptions of the intended system
+AGENTS.md MCP_TOOLS.md PROJECT.jsonld  descriptions of the intended system
 kotodama.jsonld etzhayyim.json         actor / deployment manifests
 NOTICE OWNERS README.edn migration.edn identity and licensing
 ```
@@ -53,9 +53,9 @@ the paths given, because those paths are pre-extraction monorepo paths.
   names two shell scripts under `legacy-runtime/`, which was not extracted either.
   Treat the document as a contract to implement against, not as a description of
   running code.
-- **`CLAUDE.md`** describes a Threlte 3D viewer and a d3 force-directed graph
+- **`AGENTS.md`** describes a Threlte 3D viewer and a d3 force-directed graph
   layer. The dependencies for both are declared in `package.json` and install
-  cleanly; no source file imports them. `CLAUDE.md` is accurate that these are
+  cleanly; no source file imports them. `AGENTS.md` is accurate that these are
   intentional and not dead deps — it is the *current state* section, not the
   dependency rationale, that you should trust: it already says the app is a
   placeholder.
